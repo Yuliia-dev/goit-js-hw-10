@@ -4,6 +4,7 @@ import Notiflix from 'notiflix';
 import 'notiflix/dist/notiflix-3.2.2.min.css';
 import countryList from '../src/country-list.hbs';
 import countryName from '../src/country-name.hbs';
+import { fetchCountries } from './fetchCountries';
 
 const DEBOUNCE_DELAY = 300;
 
@@ -12,19 +13,24 @@ const countryInfoList = document.querySelector('.country-list');
 
 searchInputEL.addEventListener('input', debounce(searchCountry, DEBOUNCE_DELAY));
 debounce(showCountry, DEBOUNCE_DELAY);
-debounce(fetchInput, DEBOUNCE_DELAY);
 
 function searchCountry() {
-  const textInput = searchInputEL.value;
-  if (textInput === '') {
+  const name = searchInputEL.value.trim();
+  if (name === '') {
     countryInfoList.innerHTML = '';
     return;
   }
-  fetchInput(textInput);
+  fetchCountries(name)
+    .then(showCountry)
+    .catch(error => {
+      countryInfoList.innerHTML = '';
+      Notiflix.Notify.failure('Oops, there is no country with that name');
+    });
 }
 
 function showCountry(data) {
   if (data.length >= 10) {
+    countryInfoList.innerHTML = '';
     return Notiflix.Notify.info('Too many matches found. Please enter a more specific name.');
   } else if (data.length === 1) {
     const markupCountry = countryList(data);
@@ -33,19 +39,4 @@ function showCountry(data) {
     const markupCountry = countryName(data);
     countryInfoList.innerHTML = markupCountry;
   }
-}
-
-function fetchInput(textInput) {
-  return fetch(`https://restcountries.com/v3.1/name/${textInput}`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(response.status);
-      }
-      return response.json();
-    })
-    .then(showCountry)
-    .catch(error => {
-      countryInfoList.innerHTML = '';
-      Notiflix.Notify.failure('Oops, there is no country with that name');
-    });
 }
